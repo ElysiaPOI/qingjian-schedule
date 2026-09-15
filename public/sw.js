@@ -1,4 +1,4 @@
-const CACHE = "qingjian-schedule-v1.3.0"
+const CACHE = "qingjian-schedule-v1.3.1"
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(["/", "/favicon.svg", "/manifest.webmanifest"])))

@@ -280,8 +280,20 @@ button { font: inherit; }
 .view-tabs button { border-radius: 10px; }
 .view-tabs button[data-state="active"] { background: white; box-shadow: 0 3px 10px rgba(38, 56, 88, .08); }
 .view-toolbar { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 21px; }
-.return-actions { display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
-.today-button { height: 34px; border-radius: 10px; color: #3267b4; font-size: .75rem; }
+.return-actions { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+.today-button {
+  height: 34px;
+  border: 1px solid #c6d6eb !important;
+  border-radius: 10px;
+  color: #3267b4;
+  background: rgba(248, 251, 255, .88) !important;
+  box-shadow: 0 2px 7px rgba(51, 92, 148, .06);
+  font-size: .75rem;
+  transition: color .16s ease, border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.today-button:hover { border-color: #94b2dc !important; color: #245ba8; background: #eef5ff !important; }
+.today-button:active { transform: scale(.98); }
+.today-button:focus-visible { outline: 2px solid rgba(47, 111, 237, .42); outline-offset: 2px; }
 .today-button svg { width: 14px; }
 
 .section-heading {
@@ -382,6 +394,22 @@ button { font: inherit; }
 .course-indigo { --course: #4d5dc7; --course-bg: #eff1ff; }
 .course-slate { --course: #58677e; --course-bg: #f0f3f7; }
 
+.week-carousel { width: 100%; overflow: hidden; touch-action: pan-y; }
+.week-track {
+  --week-drag-x: 0px;
+  display: flex;
+  width: 100%;
+  transform: translate3d(calc(-100% + var(--week-drag-x)), 0, 0);
+  will-change: transform;
+}
+.week-track.is-animating {
+  transition: transform .28s cubic-bezier(.22, 1, .36, 1);
+  pointer-events: none;
+}
+.week-track.is-animating[data-destination="-1"] { transform: translate3d(0, 0, 0); }
+.week-track.is-animating[data-destination="0"] { transform: translate3d(-100%, 0, 0); }
+.week-track.is-animating[data-destination="1"] { transform: translate3d(-200%, 0, 0); }
+.week-panel { width: 100%; min-width: 100%; flex: 0 0 100%; }
 .timetable-wrap { overflow: visible; padding-bottom: 4px; }
 .timetable {
   position: relative;
@@ -548,8 +576,9 @@ footer button { border: 0; color: #245ba8; background: transparent; font-weight:
   .view-tabs svg { width: 13px; }
   .view-toolbar { min-height: 32px; margin-bottom: 7px; }
   .today-button { height: 30px; padding: 0 8px; font-size: .65rem; }
-  .return-actions { min-width: 0; gap: 0; }
-  .return-actions .today-button { padding: 0 5px; }
+  .return-actions { min-width: 0; gap: 4px; }
+  .return-actions .today-button { padding: 0 6px; }
+  .today-button svg { width: 12px; }
   .section-heading { margin-bottom: 5px; }
   .section-heading span { font-size: .62rem; }
   .section-heading h2 { font-size: 1.02rem; }
@@ -629,6 +658,8 @@ footer button { border: 0; color: #245ba8; background: transparent; font-weight:
   .day-strip button.active { color: #bbd4ff; background: #17325a; box-shadow: inset 0 0 0 1px #234b83; }
   .view-tabs { background: #151f30; }
   .view-tabs button[data-state="active"] { background: #24344d; }
+  .today-button { border-color: #365174 !important; color: #a9c8f5; background: rgba(20, 36, 58, .9) !important; box-shadow: none; }
+  .today-button:hover { border-color: #5680b8 !important; color: #c6dcfb; background: #1a3151 !important; }
   .course-bar { color: #f0f5ff; background: color-mix(in srgb, var(--course), #0c1625 84%); border-color: color-mix(in srgb, var(--course), transparent 58%); }
   .course-bar-meta, .week-bar small { color: #abb9cf; }
   .time-label, .table-corner, .table-day, .table-time, .table-cell { background: #101b2b; }
@@ -648,5 +679,5 @@ footer button { border: 0; color: #245ba8; background: transparent; font-weight:
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation-duration: .01ms !important; }
-  .schedule-view { will-change: auto; }
+  .schedule-view, .week-track { will-change: auto; }
 }

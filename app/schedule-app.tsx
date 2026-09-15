@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react"
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type TouchEvent } from "react"
 import Image from "next/image"
 import { AlertTriangle, Ban, CalendarClock, CalendarDays, ChevronLeft, ChevronRight, Clock3, DatabaseBackup, Download, FileUp, FlaskConical, GraduationCap, MapPin, NotebookPen, PencilLine, Plus, RotateCcw, ShieldCheck, Trash2, Upload, UserRound } from "lucide-react"
 import { toast } from "sonner"
@@ -466,6 +466,41 @@ function CourseDetailDialog({
   </Dialog>
 }
 
+type WeekTableProps = {
+  schedule: Schedule
+  week: number
+  todayWeek: number
+  todayDay: number
+  onOpenCourse: (id: string) => void
+  onAddCourse: (day: number, slot: number) => void
+}
+
+function WeekTable({ schedule, week, todayWeek, todayDay, onOpenCourse, onAddCourse }: WeekTableProps) {
+  const courses = coursesForWeek(schedule.courses, week)
+
+  return <div className="timetable-wrap">
+    <div className="timetable">
+      {week === todayWeek && <div className="today-column-highlight" style={{ gridColumn: `${todayDay + 1} / ${todayDay + 2}`, gridRow: "1 / -1" }} aria-hidden="true" />}
+      <div className="table-corner"><Clock3 /></div>
+      {dayNames.map((name, index) => {
+        const date = dateForWeekday(schedule.startsOn, week, index + 1)
+        const holiday = holidayForDate(date)
+        return <div className="table-day" key={name}><span>{name}</span><strong>{date.getDate()}</strong>{holiday && <em className={`table-holiday ${holiday.kind}`}>{holiday.kind === "holiday" ? "休" : "班"}</em>}</div>
+      })}
+      {timeSlots.map((slot, slotIndex) => [
+        <div className={`table-time ${slotIndex > 0 && timeSlots[slotIndex - 1].phase !== slot.phase ? "phase-start" : ""}`} key={`time-${slot.start}`}><span>{slot.phase}</span><strong>{slot.start}–{slot.end}节</strong><small>{slot.time.split("–").map((time) => <b key={time}>{time}</b>)}</small></div>,
+        ...dayNames.map((_, dayIndex) => {
+          const day = dayIndex + 1
+          const slotCourses = coursesInSlot(courses, day, slot.start, slot.end)
+          return <div className={`table-cell ${slotIndex > 0 && timeSlots[slotIndex - 1].phase !== slot.phase ? "phase-start" : ""}`} key={`${day}-${slot.start}`}>
+            {slotCourses.length ? slotCourses.map((course) => <CourseBar key={course.id} course={course} weekView onOpen={() => onOpenCourse(course.id)} />) : <button type="button" className="empty-cell" onClick={() => onAddCourse(day, slot.start)} aria-label={`在${dayNames[day - 1]}第${slot.start}至${slot.end}节添加临时课程`}><Plus /></button>}
+          </div>
+        }),
+      ])}
+    </div>
+  </div>
+}
+
 export default function ScheduleApp() {
   const [schedule, setSchedule] = useState<Schedule>(initialSchedule)
   const [hydrated, setHydrated] = useState(false)
@@ -483,9 +518,13 @@ export default function ScheduleApp() {
   const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false)
   const [pendingRestore, setPendingRestore] = useState<Schedule | null>(null)
   const [androidAvailable, setAndroidAvailable] = useState(false)
+  const [weekSlide, setWeekSlide] = useState<{ destination: -1 | 0 | 1; targetWeek: number | null; animating: boolean }>({ destination: 0, targetWeek: null, animating: false })
   const fileInput = useRef<HTMLInputElement>(null)
   const backupInput = useRef<HTMLInputElement>(null)
-  const viewSwipeStart = useRef<{ x: number; y: number } | null>(null)
+  const weekTrack = useRef<HTMLDivElement>(null)
+  const weekAnimationTimer = useRef<number | null>(null)
+  const suppressWeekClickUntil = useRef(0)
+  const viewSwipeStart = useRef<{ x: number; y: number; lastX: number; lastAt: number; velocityX: number; axis: "horizontal" | "vertical" | null; dragged: boolean } | null>(null)
 
   useEffect(() => {
     try {
@@ -523,6 +562,10 @@ export default function ScheduleApp() {
     return () => window.clearInterval(timer)
   }, [])
 
+  useEffect(() => () => {
+    if (weekAnimationTimer.current !== null) window.clearTimeout(weekAnimationTimer.current)
+  }, [])
+
   const weekCourses = useMemo(() => coursesForWeek(schedule.courses, week), [schedule.courses, week])
   const selectedDate = dateForWeekday(schedule.startsOn, week, selectedDay)
   const selectedCourses = useMemo(() => weekCourses.filter((course) => course.day === selectedDay && !course.cancelled), [weekCourses, selectedDay])
@@ -536,6 +579,11 @@ export default function ScheduleApp() {
   const awayFromToday = Boolean(now && (week !== todayWeek || selectedDay !== todayDay || view !== "day"))
   const awayFromCurrentWeek = Boolean(now && week !== todayWeek)
   const selectedHoliday = holidayForDate(selectedDate)
+  const slideWeeks = [
+    weekSlide.targetWeek !== null && weekSlide.destination === -1 ? weekSlide.targetWeek : Math.max(1, week - 1),
+    week,
+    weekSlide.targetWeek !== null && weekSlide.destination === 1 ? weekSlide.targetWeek : Math.min(maxWeek, week + 1),
+  ]
 
   function saveSchedule(next: Schedule) {
     localStorage.setItem(storageKey, JSON.stringify(next))
@@ -688,6 +736,7 @@ export default function ScheduleApp() {
 
   function returnToToday() {
     const today = new Date()
+    if (weekSlide.animating) return
     setWeek(todayWeek)
     setSelectedDay(dayOfWeek(today))
     changeView("day")
@@ -695,14 +744,24 @@ export default function ScheduleApp() {
 
   function returnToCurrentWeek() {
     if (!now) return
-    const nextWeek = todayWeek
-    setViewMotion(nextWeek >= week ? "forward" : "backward")
-    setWeek(nextWeek)
+    changeWeek(todayWeek)
   }
 
   function changeWeek(nextWeek: number) {
     const boundedWeek = Math.max(1, Math.min(maxWeek, nextWeek))
-    if (boundedWeek === week) return
+    if (boundedWeek === week || weekSlide.animating) return
+    if (view === "week" && typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const destination = boundedWeek > week ? 1 : -1
+      setWeekSlide({ destination, targetWeek: boundedWeek, animating: true })
+      if (weekAnimationTimer.current !== null) window.clearTimeout(weekAnimationTimer.current)
+      weekAnimationTimer.current = window.setTimeout(() => {
+        setWeek(boundedWeek)
+        setWeekSlide({ destination: 0, targetWeek: null, animating: false })
+        weekTrack.current?.style.setProperty("--week-drag-x", "0px")
+        weekAnimationTimer.current = null
+      }, 280)
+      return
+    }
     setViewMotion(boundedWeek > week ? "forward" : "backward")
     setWeek(boundedWeek)
   }
@@ -714,8 +773,45 @@ export default function ScheduleApp() {
   }
 
   function startViewSwipe(event: TouchEvent<HTMLDivElement>) {
+    if (weekSlide.animating) return
     const touch = event.touches[0]
-    if (touch) viewSwipeStart.current = { x: touch.clientX, y: touch.clientY }
+    if (touch) {
+      const startedAt = performance.now()
+      viewSwipeStart.current = { x: touch.clientX, y: touch.clientY, lastX: touch.clientX, lastAt: startedAt, velocityX: 0, axis: null, dragged: false }
+    }
+  }
+
+  function moveViewSwipe(event: TouchEvent<HTMLDivElement>) {
+    const start = viewSwipeStart.current
+    const touch = event.touches[0]
+    if (!start || !touch || view !== "week" || weekSlide.animating) return
+    const dx = touch.clientX - start.x
+    const dy = touch.clientY - start.y
+    if (!start.axis && Math.hypot(dx, dy) >= 7) start.axis = Math.abs(dx) > Math.abs(dy) * 1.15 ? "horizontal" : "vertical"
+    if (start.axis !== "horizontal") return
+    start.dragged = Math.abs(dx) > 8
+    const movedAt = performance.now()
+    const elapsed = Math.max(1, movedAt - start.lastAt)
+    start.velocityX = (touch.clientX - start.lastX) / elapsed
+    start.lastX = touch.clientX
+    start.lastAt = movedAt
+    const atBoundary = (dx > 0 && week <= 1) || (dx < 0 && week >= maxWeek)
+    const visualDx = atBoundary ? dx * .32 : dx
+    weekTrack.current?.style.setProperty("--week-drag-x", `${visualDx}px`)
+  }
+
+  function settleWeekSwipe() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      weekTrack.current?.style.setProperty("--week-drag-x", "0px")
+      return
+    }
+    setWeekSlide({ destination: 0, targetWeek: null, animating: true })
+    if (weekAnimationTimer.current !== null) window.clearTimeout(weekAnimationTimer.current)
+    weekAnimationTimer.current = window.setTimeout(() => {
+      setWeekSlide({ destination: 0, targetWeek: null, animating: false })
+      weekTrack.current?.style.setProperty("--week-drag-x", "0px")
+      weekAnimationTimer.current = null
+    }, 280)
   }
 
   function finishViewSwipe(event: TouchEvent<HTMLDivElement>) {
@@ -725,12 +821,33 @@ export default function ScheduleApp() {
     if (!start || !touch) return
     const dx = touch.clientX - start.x
     const dy = touch.clientY - start.y
-    if (Math.abs(dx) < 52 || Math.abs(dx) <= Math.abs(dy) * 1.25) return
     if (view === "week") {
-      changeWeek(dx < 0 ? week + 1 : week - 1)
+      if (start.axis !== "horizontal") return
+      if (start.dragged) suppressWeekClickUntil.current = performance.now() + 360
+      const width = weekTrack.current?.clientWidth ?? 360
+      const finalElapsed = Math.max(1, performance.now() - start.lastAt)
+      const finalVelocity = finalElapsed < 80 ? (touch.clientX - start.lastX) / finalElapsed : start.velocityX
+      const fastSwipe = Math.abs(dx) > 16 && Math.abs(finalVelocity || start.velocityX) >= .45
+      const farEnough = Math.abs(dx) >= Math.min(92, width * .22)
+      const nextWeek = dx < 0 ? week + 1 : week - 1
+      if ((fastSwipe || farEnough) && nextWeek >= 1 && nextWeek <= maxWeek) changeWeek(nextWeek)
+      else settleWeekSwipe()
       return
     }
+    if (Math.abs(dx) < 52 || Math.abs(dx) <= Math.abs(dy) * 1.25) return
     if (dx < 0) changeView("week")
+  }
+
+  function cancelViewSwipe() {
+    const wasHorizontalWeekSwipe = view === "week" && viewSwipeStart.current?.axis === "horizontal"
+    viewSwipeStart.current = null
+    if (wasHorizontalWeekSwipe && !weekSlide.animating) settleWeekSwipe()
+  }
+
+  function preventClickAfterWeekSwipe(event: ReactMouseEvent<HTMLDivElement>) {
+    if (performance.now() >= suppressWeekClickUntil.current) return
+    event.preventDefault()
+    event.stopPropagation()
   }
 
   function openAddCourse(day: number, slot = 1, fromBlank = false) {
@@ -794,7 +911,7 @@ export default function ScheduleApp() {
       </div>
       {selectedHoliday && <p className={`holiday-summary ${selectedHoliday.kind}`}><span>{selectedHoliday.kind === "holiday" ? "休" : "班"}</span>{selectedHoliday.name} · {selectedHoliday.kind === "holiday" ? "法定节假日" : "调休上班"}</p>}
 
-      <Tabs value={view} onValueChange={(value) => changeView(value as "day" | "week")} className="schedule-tabs" data-motion={viewMotion} onTouchStart={startViewSwipe} onTouchEnd={finishViewSwipe} onTouchCancel={() => { viewSwipeStart.current = null }}>
+      <Tabs value={view} onValueChange={(value) => changeView(value as "day" | "week")} className="schedule-tabs" data-motion={viewMotion} onTouchStart={startViewSwipe} onTouchMove={moveViewSwipe} onTouchEnd={finishViewSwipe} onTouchCancel={cancelViewSwipe}>
         <div className="view-toolbar">
           <TabsList className="view-tabs"><TabsTrigger value="day"><Clock3 />单日</TabsTrigger><TabsTrigger value="week"><CalendarDays />周课表</TabsTrigger></TabsList>
           <div className="return-actions">
@@ -815,26 +932,12 @@ export default function ScheduleApp() {
             })}
           </div>
         </TabsContent>
-        <TabsContent key={`week-${week}`} value="week" className="schedule-view week-view">
-          <div className="timetable-wrap">
-            <div className="timetable">
-              {now && week === todayWeek && <div className="today-column-highlight" style={{ gridColumn: `${todayDay + 1} / ${todayDay + 2}`, gridRow: "1 / -1" }} aria-hidden="true" />}
-              <div className="table-corner"><Clock3 /></div>
-              {dayNames.map((name, index) => {
-                const date = dateForWeekday(schedule.startsOn, week, index + 1)
-                const holiday = holidayForDate(date)
-                return <div className="table-day" key={name}><span>{name}</span><strong>{date.getDate()}</strong>{holiday && <em className={`table-holiday ${holiday.kind}`}>{holiday.kind === "holiday" ? "休" : "班"}</em>}</div>
-              })}
-              {timeSlots.map((slot, slotIndex) => [
-                <div className={`table-time ${slotIndex > 0 && timeSlots[slotIndex - 1].phase !== slot.phase ? "phase-start" : ""}`} key={`time-${slot.start}`}><span>{slot.phase}</span><strong>{slot.start}–{slot.end}节</strong><small>{slot.time.split("–").map((time) => <b key={time}>{time}</b>)}</small></div>,
-                ...dayNames.map((_, dayIndex) => {
-                  const day = dayIndex + 1
-                  const courses = coursesInSlot(weekCourses, day, slot.start, slot.end)
-                  return <div className={`table-cell ${slotIndex > 0 && timeSlots[slotIndex - 1].phase !== slot.phase ? "phase-start" : ""}`} key={`${day}-${slot.start}`}>
-                    {courses.length ? courses.map((course) => <CourseBar key={course.id} course={course} weekView onOpen={() => setSelectedCourseId(course.id)} />) : <button type="button" className="empty-cell" onClick={() => openAddCourse(day, slot.start, true)} aria-label={`在${dayNames[day - 1]}第${slot.start}至${slot.end}节添加临时课程`}><Plus /></button>}
-                  </div>
-                }),
-              ])}
+        <TabsContent value="week" className="schedule-view week-view">
+          <div className="week-carousel" onClickCapture={preventClickAfterWeekSwipe}>
+            <div ref={weekTrack} className={`week-track ${weekSlide.animating ? "is-animating" : ""}`} data-destination={weekSlide.destination}>
+              {slideWeeks.map((displayWeek, index) => <section className="week-panel" aria-hidden={index !== 1} key={`${index}-${displayWeek}`}>
+                <WeekTable schedule={schedule} week={displayWeek} todayWeek={todayWeek} todayDay={todayDay} onOpenCourse={setSelectedCourseId} onAddCourse={(day, slot) => openAddCourse(day, slot, true)} />
+              </section>)}
             </div>
           </div>
           <p className="scroll-hint">点击课程查看详情 · 点击空白格添加临时课程</p>

@@ -24,7 +24,8 @@ test("android app keeps its upgrade identity while using the Qingjian branding",
     read("android/app/src/main/java/com/elysiapoi/tianyangschedule/MainActivity.java"),
   ])
   assert.match(gradle, /applicationId "com\.elysiapoi\.tianyangschedule"/)
-  assert.match(gradle, /versionName "1\.3\.0"/)
+  assert.match(gradle, /versionName "1\.3\.1"/)
+  assert.match(gradle, /versionCode 19/)
   assert.match(strings, /<string name="app_name">清简课表<\/string>/)
   assert.match(manifest, /android:icon="@mipmap\/ic_launcher"/)
   assert.match(main, /QingjianSchedule\/1\.3/)

@@ -4,29 +4,38 @@ import test from "node:test"
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8")
 
-test("schedule view supports animated horizontal navigation", async () => {
+test("weekly schedule uses a touch-following three-panel carousel", async () => {
   const [source, css] = await Promise.all([
     read("app/schedule-app.tsx"),
     read("app/globals.css"),
   ])
   assert.match(source, /startViewSwipe/)
+  assert.match(source, /moveViewSwipe/)
   assert.match(source, /finishViewSwipe/)
   assert.match(source, /if \(view === "week"\)/)
-  assert.match(source, /changeWeek\(dx < 0 \? week \+ 1 : week - 1\)/)
+  assert.match(source, /const nextWeek = dx < 0 \? week \+ 1 : week - 1/)
+  assert.match(source, /Math\.abs\(finalVelocity \|\| start\.velocityX\) >= \.45/)
+  assert.match(source, /width \* \.22/)
+  assert.match(source, /weekTrack\.current\?\.style\.setProperty\("--week-drag-x"/)
+  assert.match(source, /slideWeeks\.map/)
+  assert.match(source, /preventClickAfterWeekSwipe/)
   assert.match(source, /if \(dx < 0\) changeView\("week"\)/)
-  assert.match(source, /key=\{`week-\$\{week\}`\}/)
   assert.match(css, /touch-action:\s*pan-y/)
-  assert.match(css, /schedule-view-in-forward/)
-  assert.match(css, /schedule-view-in-backward/)
-  assert.match(css, /\.21s cubic-bezier/)
+  assert.match(css, /\.week-track/)
+  assert.match(css, /translate3d\(calc\(-100% \+ var\(--week-drag-x\)\)/)
+  assert.match(css, /\.28s cubic-bezier\(\.22, 1, \.36, 1\)/)
 })
 
 test("weekly timetable can return to the current week or today", async () => {
-  const source = await read("app/schedule-app.tsx")
+  const [source, css] = await Promise.all([
+    read("app/schedule-app.tsx"),
+    read("app/globals.css"),
+  ])
   assert.match(source, /function returnToCurrentWeek/)
   assert.match(source, /回到本周/)
   assert.match(source, /回到今天/)
   assert.match(source, /view === "week" && awayFromCurrentWeek/)
+  assert.match(css, /\.today-button \{[^}]*border:\s*1px solid/s)
 })
 
 test("official holidays and adjusted workdays are shown in date headers", async () => {

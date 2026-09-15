@@ -29,7 +29,7 @@ Windows PowerShell：
 
 ## 创建正式 Release
 
-手动运行工作流，开启“同时创建 GitHub Release”，并填写与 `android/app/build.gradle` 中 `versionName` 一致的标签，例如 `v1.3.0`。工作流会验证签名、生成 SHA-256 校验文件，并创建 GitHub Release。
+手动运行工作流，开启“同时创建 GitHub Release”，并填写与 `android/app/build.gradle` 中 `versionName` 一致的标签，例如 `v1.3.1`。工作流会验证签名、生成 SHA-256 校验文件，并创建 GitHub Release。
 
 也可以推送格式为 `v*` 的 Git 标签触发发布。标签必须与 `versionName` 完全一致。
 

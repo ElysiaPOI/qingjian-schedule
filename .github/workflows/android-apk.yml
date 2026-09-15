@@ -9,7 +9,7 @@ on:
         type: boolean
         default: false
       release_tag:
-        description: "发布标签，例如 v1.2.6（仅发布 Release 时填写）"
+        description: "发布标签，例如 v1.3.1（仅发布 Release 时填写）"
         required: false
         type: string
   push:
