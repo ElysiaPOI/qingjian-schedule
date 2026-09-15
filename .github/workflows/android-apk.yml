@@ -82,11 +82,11 @@ jobs:
             echo "Android release signing secrets are incomplete." >&2
             exit 1
           fi
-          printf '%s' "$ANDROID_SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/tianyang-schedule-release.jks"
+          printf '%s' "$ANDROID_SIGNING_KEY" | base64 --decode > "$RUNNER_TEMP/qingjian-schedule-release.jks"
 
       - name: Build signed release APK
         env:
-          TIANYANG_KEYSTORE_PATH: ${{ runner.temp }}/tianyang-schedule-release.jks
+          TIANYANG_KEYSTORE_PATH: ${{ runner.temp }}/qingjian-schedule-release.jks
           TIANYANG_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           TIANYANG_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           TIANYANG_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -100,15 +100,15 @@ jobs:
             exit 1
           fi
           mkdir -p release
-          cp android/app/build/outputs/apk/release/app-release.apk "release/天扬课表-v${VERSION_NAME}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "release/清简课表-v${VERSION_NAME}.apk"
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
-          "$APKSIGNER" verify --verbose --print-certs "release/天扬课表-v${VERSION_NAME}.apk"
-          sha256sum "release/天扬课表-v${VERSION_NAME}.apk" > "release/天扬课表-v${VERSION_NAME}.apk.sha256"
+          "$APKSIGNER" verify --verbose --print-certs "release/清简课表-v${VERSION_NAME}.apk"
+          sha256sum "release/清简课表-v${VERSION_NAME}.apk" > "release/清简课表-v${VERSION_NAME}.apk.sha256"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: tianyang-schedule-release
+          name: qingjian-schedule-release
           path: release/*
           if-no-files-found: error
 
@@ -139,4 +139,4 @@ jobs:
           else
             RELEASE_TAG="$REQUESTED_TAG"
           fi
-          gh release create "$RELEASE_TAG" release/* --target "$GITHUB_SHA" --title "天扬课表 ${RELEASE_TAG}" --generate-notes
+          gh release create "$RELEASE_TAG" release/* --target "$GITHUB_SHA" --title "清简课表 ${RELEASE_TAG}" --generate-notes

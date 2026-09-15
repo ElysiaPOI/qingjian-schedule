@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TianyangSchedule"
+rootProject.name = "QingjianSchedule"
 include ":app"

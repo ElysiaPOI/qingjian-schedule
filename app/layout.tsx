@@ -2,15 +2,15 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "天扬课表",
+  title: "清简课表",
   description: "无广告、可离线使用的个人课表",
   manifest: "/manifest.webmanifest",
   other: {
     "codex-preview": "development",
   },
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/icon-192.png",
+    shortcut: "/icon-192.png",
   },
 };
 

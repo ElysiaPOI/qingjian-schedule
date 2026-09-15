@@ -18,6 +18,10 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.webkit.WebViewAssetLoader;
 import androidx.webkit.WebViewClientCompat;
 
@@ -39,6 +43,7 @@ public final class MainActivity extends Activity {
     @SuppressLint("SetJavaScriptEnabled")
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setStatusBarColor(Color.rgb(245, 247, 251));
         getWindow().setNavigationBarColor(Color.WHITE);
 
@@ -48,6 +53,12 @@ public final class MainActivity extends Activity {
 
         webView = new WebView(this);
         webView.setBackgroundColor(Color.rgb(245, 247, 251));
+        ViewCompat.setOnApplyWindowInsetsListener(webView, (view, windowInsets) -> {
+            Insets bars = windowInsets.getInsets(
+                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return windowInsets;
+        });
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -55,7 +66,7 @@ public final class MainActivity extends Activity {
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " TianyangSchedule/1.1");
+        settings.setUserAgentString(settings.getUserAgentString() + " QingjianSchedule/1.3");
 
         webView.addJavascriptInterface(new AndroidBridge(), "TianyangAndroid");
         webView.setWebChromeClient(new WebChromeClient() {
@@ -91,6 +102,7 @@ public final class MainActivity extends Activity {
         });
         webView.setWebViewClient(new LocalContentClient());
         setContentView(webView);
+        ViewCompat.requestApplyInsets(webView);
         webView.loadUrl(APP_ORIGIN + "/index.html");
     }
 

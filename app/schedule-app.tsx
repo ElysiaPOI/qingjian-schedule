@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react"
+import Image from "next/image"
 import { AlertTriangle, Ban, CalendarClock, CalendarDays, ChevronLeft, ChevronRight, Clock3, DatabaseBackup, Download, FileUp, FlaskConical, GraduationCap, MapPin, NotebookPen, PencilLine, Plus, RotateCcw, ShieldCheck, Trash2, Upload, UserRound } from "lucide-react"
 import { toast } from "sonner"
 
@@ -17,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Toaster } from "@/components/ui/sonner"
 import { parseScheduleFile } from "@/lib/schedule-file-parser"
 import { compactWeeks, currentWeek, dateForWeekday, dayNames, initialSchedule, timeSlots, weekRange, type Course, type CourseOverride, type Schedule } from "@/lib/schedule"
+import { holidayForDate } from "@/lib/china-holidays"
 
 declare global {
   interface Window {
@@ -528,10 +530,12 @@ export default function ScheduleApp() {
   const selectedCourse = weekCourses.find((course) => course.id === selectedCourseId) ?? null
   const editingCourse = schedule.courses.find((course) => course.id === editingCourseId) ?? null
   const adjustingCourse = weekCourses.find((course) => course.id === adjustingCourseId) ?? null
-  const todayWeek = now ? currentWeek(schedule.startsOn, now) : week
+  const todayWeek = now ? Math.min(maxWeek, currentWeek(schedule.startsOn, now)) : week
   const todayDay = now ? dayOfWeek(now) : selectedDay
   const status = now ? liveCourseStatus(schedule, now) : { kind: "loading", text: "正在读取今天课程…" }
   const awayFromToday = Boolean(now && (week !== todayWeek || selectedDay !== todayDay || view !== "day"))
+  const awayFromCurrentWeek = Boolean(now && week !== todayWeek)
+  const selectedHoliday = holidayForDate(selectedDate)
 
   function saveSchedule(next: Schedule) {
     localStorage.setItem(storageKey, JSON.stringify(next))
@@ -647,7 +651,7 @@ export default function ScheduleApp() {
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }))
     const link = document.createElement("a")
     link.href = url
-    link.download = `天扬课表备份-${new Date().toISOString().slice(0, 10)}.json`
+    link.download = `清简课表备份-${new Date().toISOString().slice(0, 10)}.json`
     document.body.appendChild(link)
     link.click()
     link.remove()
@@ -660,7 +664,7 @@ export default function ScheduleApp() {
     if (!file) return
     try {
       const restored = scheduleFromBackup(JSON.parse(await file.text()) as unknown)
-      if (!restored) throw new Error("这不是有效的天扬课表备份")
+      if (!restored) throw new Error("这不是有效的清简课表备份")
       setPendingRestore(restored)
       setBackupOpen(false)
       setRestoreConfirmOpen(true)
@@ -684,9 +688,23 @@ export default function ScheduleApp() {
 
   function returnToToday() {
     const today = new Date()
-    setWeek(currentWeek(schedule.startsOn, today))
+    setWeek(todayWeek)
     setSelectedDay(dayOfWeek(today))
     changeView("day")
+  }
+
+  function returnToCurrentWeek() {
+    if (!now) return
+    const nextWeek = todayWeek
+    setViewMotion(nextWeek >= week ? "forward" : "backward")
+    setWeek(nextWeek)
+  }
+
+  function changeWeek(nextWeek: number) {
+    const boundedWeek = Math.max(1, Math.min(maxWeek, nextWeek))
+    if (boundedWeek === week) return
+    setViewMotion(boundedWeek > week ? "forward" : "backward")
+    setWeek(boundedWeek)
   }
 
   function changeView(nextView: "day" | "week") {
@@ -708,7 +726,11 @@ export default function ScheduleApp() {
     const dx = touch.clientX - start.x
     const dy = touch.clientY - start.y
     if (Math.abs(dx) < 52 || Math.abs(dx) <= Math.abs(dy) * 1.25) return
-    changeView(dx < 0 ? "week" : "day")
+    if (view === "week") {
+      changeWeek(dx < 0 ? week + 1 : week - 1)
+      return
+    }
+    if (dx < 0) changeView("week")
   }
 
   function openAddCourse(day: number, slot = 1, fromBlank = false) {
@@ -742,7 +764,7 @@ export default function ScheduleApp() {
     <div className="ambient ambient-one" /><div className="ambient ambient-two" />
     <div className="app-frame">
       <header className="topbar">
-        <div className="brand-mark"><GraduationCap /></div>
+        <div className="brand-mark"><Image src="/icon-192.png" alt="" width={192} height={192} unoptimized priority /></div>
         <div className="brand-copy"><span>{schedule.term}</span><h1>我的课表</h1></div>
         <Button className="add-button" onClick={() => openAddCourse(selectedDay)}><Plus />实验课</Button>
       </header>
@@ -754,9 +776,9 @@ export default function ScheduleApp() {
           <p className="week-range">{weekRange(schedule.startsOn, week)}</p>
         </div>
         <div className="week-switcher">
-          <Button size="icon" variant="ghost" aria-label="上一周" disabled={week <= 1} onClick={() => setWeek((value) => Math.max(1, value - 1))}><ChevronLeft /></Button>
+          <Button size="icon" variant="ghost" aria-label="上一周" disabled={week <= 1} onClick={() => changeWeek(week - 1)}><ChevronLeft /></Button>
           <span>{week} / {maxWeek}</span>
-          <Button size="icon" variant="ghost" aria-label="下一周" disabled={week >= maxWeek} onClick={() => setWeek((value) => Math.min(maxWeek, value + 1))}><ChevronRight /></Button>
+          <Button size="icon" variant="ghost" aria-label="下一周" disabled={week >= maxWeek} onClick={() => changeWeek(week + 1)}><ChevronRight /></Button>
         </div>
       </section>
 
@@ -765,14 +787,20 @@ export default function ScheduleApp() {
           const day = index + 1
           const date = dateForWeekday(schedule.startsOn, week, day)
           const hasCourse = weekCourses.some((course) => course.day === day)
-          return <button key={name} role="tab" aria-selected={selectedDay === day} className={selectedDay === day ? "active" : ""} onClick={() => setSelectedDay(day)}><span>{name.slice(1)}</span><strong>{date.getDate()}</strong>{hasCourse && <i />}</button>
+          const holiday = holidayForDate(date)
+          const holidayLabel = holiday?.kind === "holiday" ? "休" : "班"
+          return <button key={name} role="tab" aria-selected={selectedDay === day} aria-label={`${name}${date.getMonth() + 1}月${date.getDate()}日${holiday ? `，${holiday.name}${holiday.kind === "holiday" ? "放假" : "调休上班"}` : ""}`} className={selectedDay === day ? "active" : ""} onClick={() => setSelectedDay(day)}><span>{name.slice(1)}</span><strong>{date.getDate()}</strong>{holiday && <em className={`holiday-marker ${holiday.kind}`}>{holidayLabel}</em>}{hasCourse && <i />}</button>
         })}
       </div>
+      {selectedHoliday && <p className={`holiday-summary ${selectedHoliday.kind}`}><span>{selectedHoliday.kind === "holiday" ? "休" : "班"}</span>{selectedHoliday.name} · {selectedHoliday.kind === "holiday" ? "法定节假日" : "调休上班"}</p>}
 
       <Tabs value={view} onValueChange={(value) => changeView(value as "day" | "week")} className="schedule-tabs" data-motion={viewMotion} onTouchStart={startViewSwipe} onTouchEnd={finishViewSwipe} onTouchCancel={() => { viewSwipeStart.current = null }}>
         <div className="view-toolbar">
           <TabsList className="view-tabs"><TabsTrigger value="day"><Clock3 />单日</TabsTrigger><TabsTrigger value="week"><CalendarDays />周课表</TabsTrigger></TabsList>
-          {awayFromToday && <Button type="button" size="sm" variant="ghost" className="today-button" onClick={returnToToday}><RotateCcw />回到今天</Button>}
+          <div className="return-actions">
+            {view === "week" && awayFromCurrentWeek && <Button type="button" size="sm" variant="ghost" className="today-button" onClick={returnToCurrentWeek}><RotateCcw />回到本周</Button>}
+            {awayFromToday && <Button type="button" size="sm" variant="ghost" className="today-button" onClick={returnToToday}><RotateCcw />回到今天</Button>}
+          </div>
         </div>
         <TabsContent value="day" className="schedule-view day-view">
           <div className="section-heading"><div><span>{dayNames[selectedDay - 1]}</span><h2>{selectedDate.getMonth() + 1}月{selectedDate.getDate()}日</h2></div><small>{selectedCourses.length} 门课</small></div>
@@ -787,12 +815,16 @@ export default function ScheduleApp() {
             })}
           </div>
         </TabsContent>
-        <TabsContent value="week" className="schedule-view week-view">
+        <TabsContent key={`week-${week}`} value="week" className="schedule-view week-view">
           <div className="timetable-wrap">
             <div className="timetable">
               {now && week === todayWeek && <div className="today-column-highlight" style={{ gridColumn: `${todayDay + 1} / ${todayDay + 2}`, gridRow: "1 / -1" }} aria-hidden="true" />}
               <div className="table-corner"><Clock3 /></div>
-              {dayNames.map((name, index) => <div className="table-day" key={name}><span>{name}</span><strong>{dateForWeekday(schedule.startsOn, week, index + 1).getDate()}</strong></div>)}
+              {dayNames.map((name, index) => {
+                const date = dateForWeekday(schedule.startsOn, week, index + 1)
+                const holiday = holidayForDate(date)
+                return <div className="table-day" key={name}><span>{name}</span><strong>{date.getDate()}</strong>{holiday && <em className={`table-holiday ${holiday.kind}`}>{holiday.kind === "holiday" ? "休" : "班"}</em>}</div>
+              })}
               {timeSlots.map((slot, slotIndex) => [
                 <div className={`table-time ${slotIndex > 0 && timeSlots[slotIndex - 1].phase !== slot.phase ? "phase-start" : ""}`} key={`time-${slot.start}`}><span>{slot.phase}</span><strong>{slot.start}–{slot.end}节</strong><small>{slot.time.split("–").map((time) => <b key={time}>{time}</b>)}</small></div>,
                 ...dayNames.map((_, dayIndex) => {

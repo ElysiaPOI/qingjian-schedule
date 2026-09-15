@@ -16,6 +16,32 @@ test("android build uses the offline static export", async () => {
   assert.match(gradle, /dist\/client/)
 })
 
+test("android app keeps its upgrade identity while using the Qingjian branding", async () => {
+  const [gradle, manifest, strings, main] = await Promise.all([
+    read("android/app/build.gradle"),
+    read("android/app/src/main/AndroidManifest.xml"),
+    read("android/app/src/main/res/values/strings.xml"),
+    read("android/app/src/main/java/com/elysiapoi/tianyangschedule/MainActivity.java"),
+  ])
+  assert.match(gradle, /applicationId "com\.elysiapoi\.tianyangschedule"/)
+  assert.match(gradle, /versionName "1\.3\.0"/)
+  assert.match(strings, /<string name="app_name">清简课表<\/string>/)
+  assert.match(manifest, /android:icon="@mipmap\/ic_launcher"/)
+  assert.match(main, /QingjianSchedule\/1\.3/)
+})
+
+test("android web content respects system bar and cutout insets", async () => {
+  const [main, css] = await Promise.all([
+    read("android/app/src/main/java/com/elysiapoi/tianyangschedule/MainActivity.java"),
+    read("app/globals.css"),
+  ])
+  assert.match(main, /WindowCompat\.setDecorFitsSystemWindows\(getWindow\(\), false\)/)
+  assert.match(main, /WindowInsetsCompat\.Type\.systemBars\(\)/)
+  assert.match(main, /WindowInsetsCompat\.Type\.displayCutout\(\)/)
+  assert.match(main, /view\.setPadding\(bars\.left, bars\.top, bars\.right, bars\.bottom\)/)
+  assert.match(css, /env\(safe-area-inset-bottom\)/)
+})
+
 test("android import keeps credentials inside the official web page", async () => {
   const [main, importer, network, extractor] = await Promise.all([
     read("android/app/src/main/java/com/elysiapoi/tianyangschedule/MainActivity.java"),

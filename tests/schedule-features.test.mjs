@@ -4,18 +4,45 @@ import test from "node:test"
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8")
 
-test("schedule view supports horizontal swipes", async () => {
+test("schedule view supports animated horizontal navigation", async () => {
   const [source, css] = await Promise.all([
     read("app/schedule-app.tsx"),
     read("app/globals.css"),
   ])
   assert.match(source, /startViewSwipe/)
   assert.match(source, /finishViewSwipe/)
-  assert.match(source, /changeView\(dx < 0 \? "week" : "day"\)/)
+  assert.match(source, /if \(view === "week"\)/)
+  assert.match(source, /changeWeek\(dx < 0 \? week \+ 1 : week - 1\)/)
+  assert.match(source, /if \(dx < 0\) changeView\("week"\)/)
+  assert.match(source, /key=\{`week-\$\{week\}`\}/)
   assert.match(css, /touch-action:\s*pan-y/)
   assert.match(css, /schedule-view-in-forward/)
   assert.match(css, /schedule-view-in-backward/)
   assert.match(css, /\.21s cubic-bezier/)
+})
+
+test("weekly timetable can return to the current week or today", async () => {
+  const source = await read("app/schedule-app.tsx")
+  assert.match(source, /function returnToCurrentWeek/)
+  assert.match(source, /回到本周/)
+  assert.match(source, /回到今天/)
+  assert.match(source, /view === "week" && awayFromCurrentWeek/)
+})
+
+test("official holidays and adjusted workdays are shown in date headers", async () => {
+  const [source, holidays, css] = await Promise.all([
+    read("app/schedule-app.tsx"),
+    read("lib/china-holidays.ts"),
+    read("app/globals.css"),
+  ])
+  assert.match(source, /holidayForDate/)
+  assert.match(source, /holiday-marker/)
+  assert.match(source, /holiday-summary/)
+  assert.match(source, /table-holiday/)
+  assert.match(holidays, /"2026-09-25": \{ name: "中秋节", kind: "holiday" \}/)
+  assert.match(holidays, /"2026-09-20": \{ name: "国庆节调休", kind: "workday" \}/)
+  assert.match(holidays, /"2026-10-10": \{ name: "国庆节调休", kind: "workday" \}/)
+  assert.match(css, /\.holiday-marker\.workday/)
 })
 
 test("current day is outlined in the weekly timetable", async () => {

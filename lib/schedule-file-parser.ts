@@ -299,7 +299,7 @@ function parseJson(text: string): Schedule {
   if (!candidate || typeof candidate !== "object") throw new Error("JSON 中没有课表数据")
   const schedule = candidate as Partial<Schedule>
   if (typeof schedule.term !== "string" || !/^20\d{2}-\d{2}-\d{2}$/.test(schedule.startsOn ?? "") || !Array.isArray(schedule.courses)) {
-    throw new Error("JSON 不是有效的天扬课表或兼容课表")
+    throw new Error("JSON 不是有效的清简课表或兼容课表")
   }
   const courses = schedule.courses.filter((course): course is Course => Boolean(course)
     && typeof course.id === "string" && typeof course.name === "string" && Array.isArray(course.weeks)

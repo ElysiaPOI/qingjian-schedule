@@ -6,7 +6,7 @@
 
 在仓库 **Settings → Secrets and variables → Actions** 中添加：
 
-- `ANDROID_SIGNING_KEY`：`tianyang-schedule-release.jks` 的 Base64 文本
+- `ANDROID_SIGNING_KEY`：现有正式版 `.jks` 密钥库的 Base64 文本
 - `ANDROID_KEYSTORE_PASSWORD`：密钥库密码
 - `ANDROID_KEY_ALIAS`：密钥别名
 - `ANDROID_KEY_PASSWORD`：私钥密码
@@ -14,22 +14,22 @@
 生成 Base64 文本：
 
 ```bash
-base64 -w 0 tianyang-schedule-release.jks
+base64 -w 0 qingjian-schedule-release.jks
 ```
 
 Windows PowerShell：
 
 ```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("tianyang-schedule-release.jks"))
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("qingjian-schedule-release.jks"))
 ```
 
 ## 构建但不发布
 
-打开 **Actions → Verify and publish Android APK → Run workflow**，保持“同时创建 GitHub Release”为关闭状态。工作流会生成签名后的 `tianyang-schedule-release` 构建产物。
+打开 **Actions → Verify and publish Android APK → Run workflow**，保持“同时创建 GitHub Release”为关闭状态。工作流会生成签名后的 `qingjian-schedule-release` 构建产物。
 
 ## 创建正式 Release
 
-手动运行工作流，开启“同时创建 GitHub Release”，并填写与 `android/app/build.gradle` 中 `versionName` 一致的标签，例如 `v1.2.6`。工作流会验证签名、生成 SHA-256 校验文件，并创建 GitHub Release。
+手动运行工作流，开启“同时创建 GitHub Release”，并填写与 `android/app/build.gradle` 中 `versionName` 一致的标签，例如 `v1.3.0`。工作流会验证签名、生成 SHA-256 校验文件，并创建 GitHub Release。
 
 也可以推送格式为 `v*` 的 Git 标签触发发布。标签必须与 `versionName` 完全一致。
 
@@ -40,7 +40,7 @@ Windows PowerShell：
 ```bash
 npm ci
 npm run build:android-web
-export TIANYANG_KEYSTORE_PATH=/absolute/path/tianyang-schedule-release.jks
+export TIANYANG_KEYSTORE_PATH=/absolute/path/qingjian-schedule-release.jks
 export TIANYANG_KEYSTORE_PASSWORD=your-store-password
 export TIANYANG_KEY_ALIAS=tianyang_release
 export TIANYANG_KEY_PASSWORD=your-key-password
