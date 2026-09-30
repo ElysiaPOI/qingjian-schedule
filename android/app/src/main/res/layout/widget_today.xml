@@ -49,24 +49,42 @@
         android:id="@+id/widget_row_1"
         android:visibility="gone"
         style="@style/QingjianWidgetRow">
-        <TextView android:id="@+id/widget_time_1" style="@style/QingjianWidgetTime" />
-        <TextView android:id="@+id/widget_name_1" style="@style/QingjianWidgetName" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView android:id="@+id/widget_time_1" style="@style/QingjianWidgetTime" />
+            <TextView android:id="@+id/widget_name_1" style="@style/QingjianWidgetName" />
+        </LinearLayout>
         <TextView android:id="@+id/widget_room_1" style="@style/QingjianWidgetRoom" />
     </LinearLayout>
     <LinearLayout
         android:id="@+id/widget_row_2"
         android:visibility="gone"
         style="@style/QingjianWidgetRow">
-        <TextView android:id="@+id/widget_time_2" style="@style/QingjianWidgetTime" />
-        <TextView android:id="@+id/widget_name_2" style="@style/QingjianWidgetName" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView android:id="@+id/widget_time_2" style="@style/QingjianWidgetTime" />
+            <TextView android:id="@+id/widget_name_2" style="@style/QingjianWidgetName" />
+        </LinearLayout>
         <TextView android:id="@+id/widget_room_2" style="@style/QingjianWidgetRoom" />
     </LinearLayout>
     <LinearLayout
         android:id="@+id/widget_row_3"
         android:visibility="gone"
         style="@style/QingjianWidgetRow">
-        <TextView android:id="@+id/widget_time_3" style="@style/QingjianWidgetTime" />
-        <TextView android:id="@+id/widget_name_3" style="@style/QingjianWidgetName" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <TextView android:id="@+id/widget_time_3" style="@style/QingjianWidgetTime" />
+            <TextView android:id="@+id/widget_name_3" style="@style/QingjianWidgetName" />
+        </LinearLayout>
         <TextView android:id="@+id/widget_room_3" style="@style/QingjianWidgetRoom" />
     </LinearLayout>
     <TextView
