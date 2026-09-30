@@ -25,6 +25,7 @@ declare global {
     TianyangAndroid?: {
       openTeachingSystem: () => void
       platform?: () => string
+      syncWidgetSchedule?: (scheduleJson: string) => void
     }
   }
 }
@@ -534,7 +535,11 @@ export default function ScheduleApp() {
         setSchedule(parsed)
         setWeek(currentWeek(parsed.startsOn))
       }
-    } catch { localStorage.removeItem(storageKey) }
+      window.TianyangAndroid?.syncWidgetSchedule?.(saved ?? "")
+    } catch {
+      localStorage.removeItem(storageKey)
+      window.TianyangAndroid?.syncWidgetSchedule?.("")
+    }
     setHydrated(true)
     if (!window.TianyangAndroid && "serviceWorker" in navigator) {
       navigator.serviceWorker.register("/sw.js").catch(() => undefined)
@@ -586,7 +591,9 @@ export default function ScheduleApp() {
   ]
 
   function saveSchedule(next: Schedule) {
-    localStorage.setItem(storageKey, JSON.stringify(next))
+    const scheduleJson = JSON.stringify(next)
+    localStorage.setItem(storageKey, scheduleJson)
+    window.TianyangAndroid?.syncWidgetSchedule?.(scheduleJson)
     setSchedule(next)
   }
 

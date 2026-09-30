@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/widget_background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="清简课表"
+            android:textColor="#152340"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+        <TextView
+            android:id="@+id/widget_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#62718C"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_count"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:textColor="#2162BD"
+        android:textSize="11sp" />
+    <TextView
+        android:id="@+id/widget_empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="今日课程"
+        android:textColor="#62718C"
+        android:textSize="13sp" />
+
+    <LinearLayout
+        android:id="@+id/widget_row_1"
+        android:visibility="gone"
+        style="@style/QingjianWidgetRow">
+        <TextView android:id="@+id/widget_time_1" style="@style/QingjianWidgetTime" />
+        <TextView android:id="@+id/widget_name_1" style="@style/QingjianWidgetName" />
+        <TextView android:id="@+id/widget_room_1" style="@style/QingjianWidgetRoom" />
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/widget_row_2"
+        android:visibility="gone"
+        style="@style/QingjianWidgetRow">
+        <TextView android:id="@+id/widget_time_2" style="@style/QingjianWidgetTime" />
+        <TextView android:id="@+id/widget_name_2" style="@style/QingjianWidgetName" />
+        <TextView android:id="@+id/widget_room_2" style="@style/QingjianWidgetRoom" />
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/widget_row_3"
+        android:visibility="gone"
+        style="@style/QingjianWidgetRow">
+        <TextView android:id="@+id/widget_time_3" style="@style/QingjianWidgetTime" />
+        <TextView android:id="@+id/widget_name_3" style="@style/QingjianWidgetName" />
+        <TextView android:id="@+id/widget_room_3" style="@style/QingjianWidgetRoom" />
+    </LinearLayout>
+    <TextView
+        android:id="@+id/widget_more"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="3dp"
+        android:gravity="end"
+        android:textColor="#2162BD"
+        android:textSize="10sp" />
+</LinearLayout>

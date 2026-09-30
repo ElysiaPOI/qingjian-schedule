@@ -166,6 +166,12 @@ public final class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        TodayWidgetProvider.updateAll(this);
+    }
+
     public final class AndroidBridge {
         @JavascriptInterface
         public void openTeachingSystem() {
@@ -176,6 +182,15 @@ public final class MainActivity extends Activity {
         @JavascriptInterface
         public String platform() {
             return "android";
+        }
+
+        @JavascriptInterface
+        public void syncWidgetSchedule(String scheduleJson) {
+            if (scheduleJson == null || scheduleJson.length() > 2_000_000) return;
+            runOnUiThread(() -> {
+                TodayWidgetProvider.saveSchedule(MainActivity.this, scheduleJson);
+                TodayWidgetProvider.updateAll(MainActivity.this);
+            });
         }
     }
 
