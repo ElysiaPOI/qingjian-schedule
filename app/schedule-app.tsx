@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type TouchEvent } from "react"
 import Image from "next/image"
-import { AlertTriangle, Ban, CalendarClock, CalendarDays, ChevronLeft, ChevronRight, Clock3, DatabaseBackup, Download, FileUp, FlaskConical, GraduationCap, MapPin, NotebookPen, PencilLine, Plus, RotateCcw, ShieldCheck, Trash2, Upload, UserRound } from "lucide-react"
+import { AlertTriangle, Ban, CalendarClock, CalendarDays, ChevronLeft, ChevronRight, Clock3, DatabaseBackup, Download, FileUp, FlaskConical, GraduationCap, LayoutDashboard, MapPin, NotebookPen, PencilLine, Plus, RotateCcw, ShieldCheck, Trash2, Upload, UserRound } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,7 @@ declare global {
       openTeachingSystem: () => void
       platform?: () => string
       syncWidgetSchedule?: (scheduleJson: string) => void
+      addTodayWidget?: () => void
     }
   }
 }
@@ -561,6 +562,12 @@ export default function ScheduleApp() {
   })
 
   useEffect(() => {
+    const showPinInstructions = () => toast.info("当前桌面不支持应用内添加，请长按桌面空白处，在小组件列表中选择清简课表。")
+    window.addEventListener("tianyang:widget-pin-unsupported", showPinInstructions)
+    return () => window.removeEventListener("tianyang:widget-pin-unsupported", showPinInstructions)
+  }, [])
+
+  useEffect(() => {
     const update = () => setNow(new Date())
     update()
     const timer = window.setInterval(update, 30000)
@@ -956,6 +963,7 @@ export default function ScheduleApp() {
         <div className="footer-actions">
           <button onClick={() => setBackupOpen(true)}><DatabaseBackup />备份与恢复</button>
           {androidAvailable && <button onClick={() => window.TianyangAndroid?.openTeachingSystem()}><GraduationCap />教务系统读取</button>}
+          {androidAvailable && <button onClick={() => window.TianyangAndroid?.addTodayWidget?.()}><LayoutDashboard />添加桌面小组件</button>}
           <button onClick={() => fileInput.current?.click()}><FileUp />从文件导入</button>
         </div>
         <input ref={fileInput} className="sr-only" type="file" accept=".pdf,.xlsx,.xls,.csv,.tsv,.txt,.ics,.html,.htm,.json,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/calendar,application/json" onChange={(event) => importScheduleFile(event.target.files?.[0])} />

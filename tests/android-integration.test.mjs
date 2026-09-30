@@ -24,11 +24,11 @@ test("android app keeps its upgrade identity while using the Qingjian branding",
     read("android/app/src/main/java/com/elysiapoi/tianyangschedule/MainActivity.java"),
   ])
   assert.match(gradle, /applicationId "com\.elysiapoi\.tianyangschedule"/)
-  assert.match(gradle, /versionName "1\.4\.0"/)
-  assert.match(gradle, /versionCode 20/)
+  assert.match(gradle, /versionName "1\.4\.1"/)
+  assert.match(gradle, /versionCode 21/)
   assert.match(strings, /<string name="app_name">清简课表<\/string>/)
   assert.match(manifest, /android:icon="@mipmap\/ic_launcher"/)
-  assert.match(main, /QingjianSchedule\/1\.3/)
+  assert.match(main, /QingjianSchedule\/1\.4\.1/)
 })
 
 test("today widget is registered and receives both restored and edited schedules", async () => {
@@ -45,7 +45,8 @@ test("today widget is registered and receives both restored and edited schedules
   assert.match(main, /@JavascriptInterface\s+public void syncWidgetSchedule\(String scheduleJson\)/)
   assert.match(widget, /getSharedPreferences\(PREFS, Context\.MODE_PRIVATE\)/)
   assert.match(widget, /adjustment\.optBoolean\("cancelled"\)/)
-  assert.match(widget, /manager\.updateAppWidget\(id, views\)/)
+  assert.match(widget, /manager\.updateAppWidget\(id, new RemoteViews\(sizes\)\)/)
+  assert.match(widget, /onAppWidgetOptionsChanged/)
   assert.match(manifest, /\.TodayWidgetProvider/)
   assert.match(info, /updatePeriodMillis="1800000"/)
   assert.match(layout, /@\+id\/widget_root/)

@@ -2,10 +2,13 @@ package com.elysiapoi.tianyangschedule;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.appwidget.AppWidgetManager;
 import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.webkit.JavascriptInterface;
 import android.webkit.MimeTypeMap;
@@ -66,7 +69,7 @@ public final class MainActivity extends Activity {
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " QingjianSchedule/1.3");
+        settings.setUserAgentString(settings.getUserAgentString() + " QingjianSchedule/1.4.1");
 
         webView.addJavascriptInterface(new AndroidBridge(), "TianyangAndroid");
         webView.setWebChromeClient(new WebChromeClient() {
@@ -190,6 +193,27 @@ public final class MainActivity extends Activity {
             runOnUiThread(() -> {
                 TodayWidgetProvider.saveSchedule(MainActivity.this, scheduleJson);
                 TodayWidgetProvider.updateAll(MainActivity.this);
+            });
+        }
+
+        @JavascriptInterface
+        public void addTodayWidget() {
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    AppWidgetManager manager = AppWidgetManager.getInstance(MainActivity.this);
+                    if (manager.isRequestPinAppWidgetSupported()) {
+                        try {
+                            if (manager.requestPinAppWidget(new ComponentName(
+                                    MainActivity.this, TodayWidgetProvider.class), null, null)) {
+                                return;
+                            }
+                        } catch (RuntimeException ignored) {
+                            // Some launchers reject pin requests despite reporting support.
+                        }
+                    }
+                }
+                webView.evaluateJavascript(
+                        "window.dispatchEvent(new Event('tianyang:widget-pin-unsupported'))", null);
             });
         }
     }

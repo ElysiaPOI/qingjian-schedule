@@ -6,6 +6,9 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.SizeF;
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -18,8 +21,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -74,6 +79,13 @@ public final class TodayWidgetProvider extends AppWidgetProvider {
     }
 
     @Override
+    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
+                                          int appWidgetId, Bundle newOptions) {
+        super.onAppWidgetOptionsChanged(context, manager, appWidgetId, newOptions);
+        update(context, manager, new int[]{appWidgetId});
+    }
+
+    @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
         String action = intent.getAction();
@@ -102,31 +114,55 @@ public final class TodayWidgetProvider extends AppWidgetProvider {
         PendingIntent open = PendingIntent.getActivity(context, 0, launch,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         for (int id : ids) {
-            RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_today);
-            views.setTextViewText(R.id.widget_date, dayText);
-            views.setTextViewText(R.id.widget_count, summary);
-            views.setTextViewText(R.id.widget_empty, state);
-            views.setViewVisibility(R.id.widget_empty, lessons.isEmpty() ? View.VISIBLE : View.GONE);
-            for (int i = 0; i < ROW_IDS.length; i++) {
-                if (i < lessons.size()) {
-                    Lesson lesson = lessons.get(i);
-                    views.setViewVisibility(ROW_IDS[i], View.VISIBLE);
-                    views.setTextViewText(TIME_IDS[i], lesson.time);
-                    views.setTextViewText(NAME_IDS[i], lesson.name);
-                    views.setTextViewText(ROOM_IDS[i], lesson.room);
-                    views.setViewVisibility(ROOM_IDS[i],
-                            lesson.room.isEmpty() ? View.GONE : View.VISIBLE);
-                } else {
-                    views.setViewVisibility(ROW_IDS[i], View.GONE);
-                }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Map<SizeF, RemoteViews> sizes = new LinkedHashMap<>();
+                sizes.put(new SizeF(179f, 109f),
+                        createViews(context, dayText, summary, state, lessons, open, 1, false));
+                sizes.put(new SizeF(179f, 140f),
+                        createViews(context, dayText, summary, state, lessons, open, 2, false));
+                sizes.put(new SizeF(179f, 175f),
+                        createViews(context, dayText, summary, state, lessons, open, 3, false));
+                sizes.put(new SizeF(179f, 215f),
+                        createViews(context, dayText, summary, state, lessons, open, 3, true));
+                manager.updateAppWidget(id, new RemoteViews(sizes));
+            } else {
+                Bundle options = manager.getAppWidgetOptions(id);
+                int height = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 180);
+                int rows = height < 140 ? 1 : height < 175 ? 2 : 3;
+                manager.updateAppWidget(id, createViews(context, dayText, summary, state,
+                        lessons, open, rows, height >= 215));
             }
-            views.setTextViewText(R.id.widget_more,
-                    lessons.size() > ROW_IDS.length ? "还有 " + (lessons.size() - ROW_IDS.length) + " 门，打开查看" : "");
-            views.setViewVisibility(R.id.widget_more,
-                    lessons.size() > ROW_IDS.length ? View.VISIBLE : View.GONE);
-            views.setOnClickPendingIntent(R.id.widget_root, open);
-            manager.updateAppWidget(id, views);
         }
+    }
+
+    private static RemoteViews createViews(Context context, String dayText, String summary,
+                                           String state, List<Lesson> lessons, PendingIntent open,
+                                           int maxRows, boolean showMore) {
+        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_today);
+        views.setTextViewText(R.id.widget_date, dayText);
+        views.setTextViewText(R.id.widget_count, summary);
+        views.setTextViewText(R.id.widget_empty, state);
+        views.setViewVisibility(R.id.widget_empty, lessons.isEmpty() ? View.VISIBLE : View.GONE);
+        for (int i = 0; i < ROW_IDS.length; i++) {
+            if (i < lessons.size() && i < maxRows) {
+                Lesson lesson = lessons.get(i);
+                views.setViewVisibility(ROW_IDS[i], View.VISIBLE);
+                views.setTextViewText(TIME_IDS[i], lesson.time);
+                views.setTextViewText(NAME_IDS[i], lesson.name);
+                views.setTextViewText(ROOM_IDS[i], lesson.room);
+                views.setViewVisibility(ROOM_IDS[i],
+                        lesson.room.isEmpty() ? View.GONE : View.VISIBLE);
+            } else {
+                views.setViewVisibility(ROW_IDS[i], View.GONE);
+            }
+        }
+        int remaining = lessons.size() - Math.min(maxRows, ROW_IDS.length);
+        views.setTextViewText(R.id.widget_more,
+                remaining > 0 && showMore ? "还有 " + remaining + " 门，打开查看" : "");
+        views.setViewVisibility(R.id.widget_more,
+                remaining > 0 && showMore ? View.VISIBLE : View.GONE);
+        views.setOnClickPendingIntent(R.id.widget_root, open);
+        return views;
     }
 
     private static boolean hasRealSchedule(String json) {

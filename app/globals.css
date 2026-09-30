@@ -631,7 +631,8 @@ footer button { border: 0; color: #245ba8; background: transparent; font-weight:
   .backup-actions button { min-height: 66px; }
   footer { flex-wrap: wrap; gap: 12px; margin: 12px 15px 0; padding-bottom: max(18px, calc(18px + env(safe-area-inset-bottom))); scroll-margin-bottom: max(18px, env(safe-area-inset-bottom)); }
   footer > span { max-width: 220px; }
-  .footer-actions { width: 100%; justify-content: space-between; gap: 10px; }
+  .footer-actions { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .footer-actions button { min-height: 34px; }
 }
 
 @media (prefers-color-scheme: dark) {
